@@ -40,10 +40,10 @@ function App() {
   }, []);
 
   const handleChange = (key: SystemUsageMetric) => (value: number | null) => {
-    setMetrics(prev => ({
-      ...prev,
+    setMetrics({
+      ...metrics,
       [key]: value,
-    }));
+    });
   };
   const handleSwitchChange = useCallback((value: boolean) => {
     setIsStrictMode(value);
