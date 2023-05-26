@@ -20,8 +20,8 @@ function App() {
   });
 
   useEffect(() => {
-    if (isStrictMode !== calculationService.isStrict) {
-      calculationService.isStrict = isStrictMode;
+    if (isStrictMode !== calculationService.isStrictMode) {
+      calculationService.isStrictMode = isStrictMode;
     }
   }, [isStrictMode]);
 

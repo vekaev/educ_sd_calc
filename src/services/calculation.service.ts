@@ -5,11 +5,11 @@ const SECONDS_IN_DAY = 86400;
 class CalculationService {
   secondsInDay = SECONDS_IN_DAY;
 
-  get isStrict(): boolean {
+  get isStrictMode(): boolean {
     return this.secondsInDay === SECONDS_IN_DAY;
   }
 
-  set isStrict(isStrict: boolean) {
+  set isStrictMode(isStrict: boolean) {
     this.secondsInDay = isStrict ? SECONDS_IN_DAY : 100000;
   }
 
