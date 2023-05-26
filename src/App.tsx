@@ -1,4 +1,4 @@
-import { Switch } from 'antd';
+import { Button, Switch } from 'antd';
 import { useLocalStorage } from 'react-use';
 import { useMemo, useCallback, useEffect } from 'react';
 
@@ -18,43 +18,42 @@ const DauInputNumber = withMetricDefinition(
   'DauMetric'
 );
 
+const DEFAULT_SYSTEM_USAGE_METRICS: Record<SystemUsageMetric, number> = {
+  dau: AMOUNT_METRIC_MAP.M,
+  reads: 10,
+  writes: 1,
+};
+
 function App() {
   const [isStrictMode, setIsStrictMode] = useLocalStorage(
     'isStrictMode',
     false
   );
-  const [metrics, setMetrics] = useLocalStorage<
-    Record<SystemUsageMetric, number>
-  >('SystemUsageMetrics', {
-    dau: AMOUNT_METRIC_MAP.M,
-    reads: 10,
-    writes: 1,
-  });
+  const [metrics, setMetrics] = useLocalStorage(
+    'SystemUsageMetrics',
+    DEFAULT_SYSTEM_USAGE_METRICS
+  );
 
   useEffect(() => {
     calculationService.isStrictMode = isStrictMode;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleChange = useCallback(
-    (key: SystemUsageMetric) => (value: number | null) => {
-      if (value === null) return;
-
-      setMetrics(prev => ({
-        ...prev,
-        [key]: value,
-      }));
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
+  const handleChange = (key: SystemUsageMetric) => (value: number | null) => {
+    setMetrics(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
   const handleSwitchChange = useCallback((value: boolean) => {
     setIsStrictMode(value);
     calculationService.isStrictMode = value;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
+  const handleReset = useCallback(() => {
+    location.reload();
+    localStorage.clear();
+  }, []);
   const rps = useMemo(
     () =>
       (isStrictMode ? '' : '~ ') +
@@ -90,6 +89,7 @@ function App() {
       />
       {rps} RPS
       {/* <MemoryCalculationTable /> */}
+      <Button onClick={handleReset}>Reset</Button>
     </>
   );
 }
