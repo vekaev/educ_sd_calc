@@ -1,9 +1,11 @@
-import { Metrics } from '../types';
-
 const SECONDS_IN_DAY = 86400;
 
-class CalculationService {
+export class CalculationService {
   secondsInDay = SECONDS_IN_DAY;
+
+  constructor(isStrictMode?: boolean) {
+    if (isStrictMode !== undefined) this.isStrictMode = isStrictMode;
+  }
 
   get isStrictMode(): boolean {
     return this.secondsInDay === SECONDS_IN_DAY;
@@ -13,8 +15,10 @@ class CalculationService {
     this.secondsInDay = isStrict ? SECONDS_IN_DAY : 100000;
   }
 
-  getRps = (metrics: Metrics): number => {
-    return (metrics.reads + metrics.writes) / this.secondsInDay;
+  getRps = (reqAmount: number): number => {
+    const rps = reqAmount / this.secondsInDay;
+
+    return this.isStrictMode ? rps : Math.round(rps);
   };
 }
 

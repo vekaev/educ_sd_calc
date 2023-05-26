@@ -1,10 +1,10 @@
-export enum MetricDefinition {
-    READS = 'reads',
-    WRITES = 'writes',
-    DAU = 'dau',
+export enum SystemUsageMetric {
+  READS = 'reads',
+  WRITES = 'writes',
+  DAU = 'dau',
 }
 
 export interface Metrics {
-  [MetricDefinition.READS]: number;
-  [MetricDefinition.WRITES]: number;
+  [SystemUsageMetric.READS]: number;
+  [SystemUsageMetric.WRITES]: number;
 }

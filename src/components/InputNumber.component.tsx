@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from 'react-use';
 import {
   InputNumber as AntdInputNumber,
   Select,
@@ -7,30 +8,11 @@ import {
 
 const { Option } = Select;
 
-interface InputNumberProps
-  extends Omit<AntdInputNumberProps<number>, 'onChange'> {
-  onChange?: (value: number) => void;
-}
+type InputNumberProps = AntdInputNumberProps<number>;
 
-export const InputNumber: React.FC<InputNumberProps> = React.memo(
-  ({ onChange, ...props }) => {
-    const handleChange = useCallback(
-      (value: number | null) => onChange?.(value || 0),
-      [onChange]
-    );
-
-    return (
-      <AntdInputNumber
-        min={0}
-        size="large"
-        type="number"
-        defaultValue={0}
-        onChange={handleChange}
-        {...props}
-      />
-    );
-  }
-);
+export const InputNumber: React.FC<InputNumberProps> = React.memo(props => {
+  return <AntdInputNumber size="large" type="number" {...props} />;
+});
 
 enum MetricDefinition {
   K = 'K',
@@ -39,7 +21,7 @@ enum MetricDefinition {
   T = 'T',
 }
 
-const METRIC_MAP = {
+export const AMOUNT_METRIC_MAP = {
   '-': 1,
   [MetricDefinition.K]: Math.pow(10, 3),
   [MetricDefinition.M]: Math.pow(10, 6),
@@ -47,35 +29,53 @@ const METRIC_MAP = {
   [MetricDefinition.T]: Math.pow(10, 12),
 };
 
-const withMetric = (
+export const withMetricDefinition = (
   InputComponent: React.FC<InputNumberProps>,
-  defaultMetric = METRIC_MAP[MetricDefinition.M]
+  defaultMetric = AMOUNT_METRIC_MAP[MetricDefinition.M],
+  persistKey?: string
 ) => {
-  return ({ ...props }: InputNumberProps) => {
-    const [value, setValue] = useState<number>(props.value || 0);
-    const [metric, setMetric] = useState<number>(defaultMetric);
+  return ({ min = 1, ...props }: InputNumberProps) => {
+    const [persistMetric, setPersistMetric] = useLocalStorage<number>(
+      persistKey || ' ',
+      defaultMetric
+    );
+    const [metric, setMetric] = useState<number>(
+      persistKey ? persistMetric : defaultMetric
+    );
+    const [value, setValue] = useState<number | null>(
+      (props.value || 0) / metric
+    );
 
     useEffect(() => {
-      props.onChange?.(value * metric);
+      props.onChange?.((value || 0) * metric);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value, metric]);
 
     const selectAfter = useMemo(
       () => (
-        <Select value={metric} style={{ width: 60 }} onChange={setMetric}>
-          {Object.entries(METRIC_MAP).map(([key, value]) => (
+        <Select
+          value={metric}
+          style={{ width: 60 }}
+          onChange={metric => {
+            setMetric(metric);
+            setPersistMetric(metric);
+          }}
+        >
+          {Object.entries(AMOUNT_METRIC_MAP).map(([key, value]) => (
             <Option value={value} key={key}>
               {key}
             </Option>
           ))}
         </Select>
       ),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       [metric]
     );
 
     return (
       <InputComponent
         {...props}
+        min={min}
         value={value}
         addonAfter={selectAfter}
         onChange={setValue}
@@ -83,5 +83,3 @@ const withMetric = (
     );
   };
 };
-
-export const MetricInputNumber = withMetric(InputNumber);
