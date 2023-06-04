@@ -1,4 +1,12 @@
-const SECONDS_IN_DAY = 86400;
+import {
+  MemoryUnit,
+  MEMORY_UNITS,
+  SECONDS_IN_DAY,
+  MEMORY_METRIC_MAP,
+  AMOUNT_METRIC_MAP,
+  AmountMetric,
+  AMOUNT_UNITS,
+} from '../constants/metric.constants';
 
 export class CalculationService {
   secondsInDay = SECONDS_IN_DAY;
@@ -19,6 +27,34 @@ export class CalculationService {
     const rps = reqAmount / this.secondsInDay;
 
     return this.isStrictMode ? rps : Math.round(rps);
+  };
+
+  formatMemory = (value: number): string => {
+    let unitIndex = 0;
+
+    while (
+      value >= MEMORY_METRIC_MAP[MemoryUnit.KB] &&
+      unitIndex < MEMORY_UNITS.length - 1
+    ) {
+      value /= MEMORY_METRIC_MAP[MemoryUnit.KB];
+      unitIndex++;
+    }
+
+    return `${value}${MEMORY_UNITS[unitIndex]}`;
+  };
+
+  formatUnits = (value: number): string => {
+    let unitIndex = 0;
+
+    while (
+      value >= AMOUNT_METRIC_MAP[AmountMetric.K] &&
+      unitIndex < AMOUNT_UNITS.length - 1
+    ) {
+      value /= AMOUNT_METRIC_MAP[AmountMetric.K];
+      unitIndex++;
+    }
+
+    return `${value}${AMOUNT_UNITS[unitIndex]}`;
   };
 }
 

@@ -1,22 +1,20 @@
 import { Button, Switch } from 'antd';
-import { useLocalStorage } from 'react-use';
-import { useMemo, useCallback, useEffect } from 'react';
+import { useSessionStorage } from 'react-use';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   InputNumber,
-  AMOUNT_METRIC_MAP,
-  withMetricDefinition,
+  DauInputNumber,
+  MemoryInputNumber,
 } from './components/InputNumber.component';
 // import MemoryCalculationTable from './components/MemoryCalculation.component';
 import { calculationService } from './services/calculation.service';
 
 import { SystemUsageMetric } from './types';
-
-const DauInputNumber = withMetricDefinition(
-  InputNumber,
-  AMOUNT_METRIC_MAP.M,
-  'DauMetric'
-);
+import {
+  AMOUNT_METRIC_MAP,
+  MEMORY_METRIC_MAP,
+} from './constants/metric.constants';
 
 const DEFAULT_SYSTEM_USAGE_METRICS: Record<SystemUsageMetric, number> = {
   dau: AMOUNT_METRIC_MAP.M,
@@ -24,12 +22,19 @@ const DEFAULT_SYSTEM_USAGE_METRICS: Record<SystemUsageMetric, number> = {
   writes: 1,
 };
 
+// TODO: move to utils
+const reset = () => {
+  location.reload();
+  localStorage.clear();
+  sessionStorage.clear();
+};
+
 function App() {
-  const [isStrictMode, setIsStrictMode] = useLocalStorage(
+  const [isStrictMode, setIsStrictMode] = useSessionStorage(
     'isStrictMode',
-    false
+    true
   );
-  const [metrics, setMetrics] = useLocalStorage(
+  const [metrics, setMetrics] = useSessionStorage(
     'SystemUsageMetrics',
     DEFAULT_SYSTEM_USAGE_METRICS
   );
@@ -50,15 +55,9 @@ function App() {
     calculationService.isStrictMode = value;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const handleReset = useCallback(() => {
-    location.reload();
-    localStorage.clear();
-  }, []);
-  const rps = useMemo(
-    () =>
-      (isStrictMode ? '' : '~ ') +
-      calculationService.getRps(metrics.dau * (metrics.reads + metrics.writes)),
-    [isStrictMode, metrics]
+
+  const rps = calculationService.formatUnits(
+    calculationService.getRps(metrics.dau * (metrics.reads + metrics.writes))
   );
 
   return (
@@ -88,10 +87,36 @@ function App() {
         onChange={handleChange(SystemUsageMetric.WRITES)}
       />
       {rps} RPS
-      {/* <MemoryCalculationTable /> */}
-      <Button onClick={handleReset}>Reset</Button>
+      <MemoryCalculationTable wps={metrics.dau * metrics.writes} />
+      <Button onClick={reset}>Reset</Button>
     </>
   );
 }
+
+const MemoryCalculationTable = ({ wps }: { wps: number }) => {
+  const [totalMemoryEntityAmount, setTotalMemoryEntityAmount] =
+    useSessionStorage<number | null>('temp', MEMORY_METRIC_MAP.MB);
+  const memory = useMemo(
+    () =>
+      totalMemoryEntityAmount
+        ? calculationService.formatMemory(wps * totalMemoryEntityAmount)
+        : 0,
+    [totalMemoryEntityAmount, wps]
+  );
+  // const memoryWithReplication = useMemo(
+  //   () => calculationService.getMemoryWithReplication(wps),
+  //   [wps]
+  // );
+
+  return (
+    <>
+      <MemoryInputNumber
+        value={totalMemoryEntityAmount}
+        onChange={setTotalMemoryEntityAmount}
+      />
+      {memory}
+    </>
+  );
+};
 
 export default App;
