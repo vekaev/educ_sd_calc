@@ -7,6 +7,7 @@ import {
   AmountMetric,
   AMOUNT_UNITS,
 } from '../constants/metric.constants';
+import { MetricMap } from '../types';
 
 export class CalculationService {
   secondsInDay = SECONDS_IN_DAY;
@@ -24,12 +25,14 @@ export class CalculationService {
   }
 
   getRps = (reqAmount: number): number => {
-    const rps = reqAmount / this.secondsInDay;
-
-    return this.isStrictMode ? rps : Math.round(rps);
+    return this.formatValue(reqAmount / this.secondsInDay);
   };
 
-  formatMemory = (value: number): string => {
+  formatValue = (value: number): number => {
+    return this.isStrictMode ? value : Math.round(value);
+  };
+
+  getValueWithMemoryUnits = (value: number): string => {
     let unitIndex = 0;
 
     while (
@@ -40,7 +43,7 @@ export class CalculationService {
       unitIndex++;
     }
 
-    return `${value}${MEMORY_UNITS[unitIndex]}`;
+    return `${this.formatValue(value)} ${MEMORY_UNITS[unitIndex]}`;
   };
 
   formatUnits = (value: number): string => {
@@ -54,8 +57,23 @@ export class CalculationService {
       unitIndex++;
     }
 
-    return `${value}${AMOUNT_UNITS[unitIndex]}`;
+    return `${this.formatValue(value)} ${AMOUNT_UNITS[unitIndex]}`;
+  };
+
+  getMetricValue = <T extends MetricMap<T>>(
+    value: number,
+    metricMap: T
+  ): number => {
+    let result = 1;
+
+    for (const key in metricMap) {
+      if (metricMap[key] > value) break;
+
+      result = metricMap[key];
+    }
+
+    return result;
   };
 }
 
-export const calculationService = new CalculationService();
+export const calculationService = new CalculationService(false);

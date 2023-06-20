@@ -1,94 +1,55 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSessionStorage } from 'react-use';
+import { useEffect, useState } from 'react';
 import {
-  InputNumber as AntdInputNumber,
   Select,
+  InputNumber as AntdInputNumber,
   InputNumberProps as AntdInputNumberProps,
 } from 'antd';
-import {
-  AMOUNT_METRIC_MAP,
-  AmountMetric,
-  MEMORY_METRIC_MAP,
-  MemoryUnit,
-} from '../constants/metric.constants';
 
-const { Option } = Select;
+import { MetricMap } from '../types';
+import { calculationService } from '../services/calculation.service';
 
 type InputNumberProps = AntdInputNumberProps<number>;
 
-export const InputNumber: React.FC<InputNumberProps> = React.memo(props => {
+export function InputNumber(props: InputNumberProps) {
   return <AntdInputNumber size="large" type="number" {...props} />;
-});
+}
 
-export const withMetricSelect = (
-  InputComponent: React.FC<InputNumberProps>,
-  {
-    metricMap,
-    defaultMetricKey,
-    persistKey,
-  }: {
-    metricMap: Record<string, number>;
-    defaultMetricKey: keyof typeof metricMap;
-    persistKey?: string;
-  }
-) => {
-  return ({ min = 1, ...props }: InputNumberProps) => {
-    const [persistMetric, setPersistMetric] = useSessionStorage<number>(
-      persistKey || ' ',
-      metricMap[defaultMetricKey]
-    );
-    const [metric, setMetric] = useState<number>(
-      persistKey ? persistMetric : metricMap[defaultMetricKey]
-    );
-    const [value, setValue] = useState<number | null>(
-      (props.value || 0) / metric
-    );
+export function InputWithMetricSelect<T extends MetricMap<T>>({
+  value,
+  onChange,
+  metricMap,
+  ...props
+}: {
+  metricMap: T;
+  value: number;
+  onChange: (value: number) => void;
+  // defaultMetricKey: keyof T;
+} & Omit<InputNumberProps, 'onChange'>) {
+  const [metric, setMetric] = useState<number>(() =>
+    calculationService.getMetricValue(value, metricMap)
+  );
+  const [_value, setValue] = useState<number | null>(() =>
+    Math.ceil(value / metric)
+  );
+  useEffect(() => {
+    onChange((_value || 0) * metric);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [_value, metric]);
 
-    const handleSelect = useCallback((metric: number) => {
-      setMetric(metric);
-      if (persistKey) setPersistMetric(metric);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-      props.onChange?.((value || 0) * metric);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value, metric]);
-
-    const selectAfter = useMemo(
-      () => (
-        <Select value={metric} style={{ width: 70 }} onChange={handleSelect}>
+  return (
+    <InputNumber
+      {...props}
+      value={_value}
+      onChange={setValue}
+      addonAfter={
+        <Select value={metric} style={{ width: 70 }} onChange={setMetric}>
           {Object.entries(metricMap).map(([key, value]) => (
-            <Option value={value} key={key}>
+            <Select.Option value={value} key={key}>
               {key}
-            </Option>
+            </Select.Option>
           ))}
         </Select>
-      ),
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [metric]
-    );
-
-    return (
-      <InputComponent
-        {...props}
-        min={min}
-        value={value}
-        addonAfter={selectAfter}
-        onChange={setValue}
-      />
-    );
-  };
-};
-
-export const DauInputNumber = withMetricSelect(InputNumber, {
-  metricMap: AMOUNT_METRIC_MAP,
-  defaultMetricKey: AmountMetric.M,
-  persistKey: 'DauMetric',
-});
-
-export const MemoryInputNumber = withMetricSelect(InputNumber, {
-  metricMap: MEMORY_METRIC_MAP,
-  defaultMetricKey: MemoryUnit.MB,
-  persistKey: 'EntityMetric',
-});
+      }
+    />
+  );
+}

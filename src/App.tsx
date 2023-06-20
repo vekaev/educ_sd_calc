@@ -1,23 +1,50 @@
+import React, { useCallback, useEffect, useMemo } from 'react';
+
 import { Button, Switch } from 'antd';
-import { useSessionStorage } from 'react-use';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from 'react-use';
+
+// interface Tables {
+//   persons: {
+//     id: string;
+//     name: string
+//   },
+//   animals: {
+//     createdAt: Date
+//     name: string
+//   }
+// }
+
+// type V<Keys> = {
+//   [K]
+// }
+
+// type MetricMap<T> = {
+//   [K in keyof T]: number;
+// };
+
+// declare function select<
+//   TableName extends keyof Tables,
+//   Keys extends keyof Tables[TableName]
+// >(tableName: TableName, keys: Keys[]): Tables[TableName];
+
+// const a = select('animals', ['createdAt'])
 
 import {
   InputNumber,
-  DauInputNumber,
-  MemoryInputNumber,
+  InputWithMetricSelect,
 } from './components/InputNumber.component';
-// import MemoryCalculationTable from './components/MemoryCalculation.component';
 import { calculationService } from './services/calculation.service';
 
-import { SystemUsageMetric } from './types';
+import { Metrics, SystemUsageMetric } from './types';
 import {
   AMOUNT_METRIC_MAP,
   MEMORY_METRIC_MAP,
 } from './constants/metric.constants';
 
-const DEFAULT_SYSTEM_USAGE_METRICS: Record<SystemUsageMetric, number> = {
-  dau: AMOUNT_METRIC_MAP.M,
+const DEFAULT_SYSTEM_USAGE_METRICS: Metrics & {
+  dau: number;
+} = {
+  dau: 1 * AMOUNT_METRIC_MAP.M,
   reads: 10,
   writes: 1,
 };
@@ -30,19 +57,18 @@ const reset = () => {
 };
 
 function App() {
-  const [isStrictMode, setIsStrictMode] = useSessionStorage(
+  const [isStrictMode, setIsStrictMode] = useLocalStorage(
     'isStrictMode',
-    true
+    false
   );
-  const [metrics, setMetrics] = useSessionStorage(
+  const [metrics, setMetrics] = useLocalStorage(
     'SystemUsageMetrics',
     DEFAULT_SYSTEM_USAGE_METRICS
   );
 
   useEffect(() => {
     calculationService.isStrictMode = isStrictMode;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isStrictMode]);
 
   const handleChange = (key: SystemUsageMetric) => (value: number | null) => {
     setMetrics({
@@ -50,15 +76,16 @@ function App() {
       [key]: value,
     });
   };
-  const handleSwitchChange = useCallback((value: boolean) => {
-    setIsStrictMode(value);
-    calculationService.isStrictMode = value;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const rps = calculationService.formatUnits(
     calculationService.getRps(metrics.dau * (metrics.reads + metrics.writes))
   );
+
+  const handleSwitchChange = (value: boolean) => {
+    setIsStrictMode(value);
+    // TODO: fix later
+    // calculationService.isStrictMode = value;
+  };
 
   return (
     <>
@@ -69,9 +96,10 @@ function App() {
         checked={isStrictMode}
         onChange={handleSwitchChange}
       />
-      <DauInputNumber
+      <InputWithMetricSelect
         addonBefore="DAU"
         value={metrics.dau}
+        metricMap={AMOUNT_METRIC_MAP}
         onChange={handleChange(SystemUsageMetric.DAU)}
       />
       <InputNumber
@@ -93,30 +121,29 @@ function App() {
   );
 }
 
-const MemoryCalculationTable = ({ wps }: { wps: number }) => {
-  const [totalMemoryEntityAmount, setTotalMemoryEntityAmount] =
-    useSessionStorage<number | null>('temp', MEMORY_METRIC_MAP.MB);
-  const memory = useMemo(
-    () =>
-      totalMemoryEntityAmount
-        ? calculationService.formatMemory(wps * totalMemoryEntityAmount)
-        : 0,
-    [totalMemoryEntityAmount, wps]
+function MemoryCalculationTable({ wps }: { wps: number }) {
+  const [totalMemory, setTotalMemory] = useLocalStorage<number>(
+    'temp',
+    1 * MEMORY_METRIC_MAP.MB
   );
-  // const memoryWithReplication = useMemo(
-  //   () => calculationService.getMemoryWithReplication(wps),
-  //   [wps]
-  // );
+  const [memoryPerDay, memoryPerMonth, memoryPerYear] = [
+    calculationService.getValueWithMemoryUnits(wps * totalMemory),
+    calculationService.getValueWithMemoryUnits(wps * totalMemory * 30),
+    calculationService.getValueWithMemoryUnits(wps * totalMemory * 365),
+  ];
 
   return (
     <>
-      <MemoryInputNumber
-        value={totalMemoryEntityAmount}
-        onChange={setTotalMemoryEntityAmount}
+      <InputWithMetricSelect
+        value={totalMemory}
+        onChange={setTotalMemory}
+        metricMap={MEMORY_METRIC_MAP}
       />
-      {memory}
+      <p>Day: {memoryPerDay}</p>
+      <p>Month: {memoryPerMonth}</p>
+      <p>Year: {memoryPerYear}</p>
     </>
   );
-};
+}
 
 export default App;
